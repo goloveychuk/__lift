@@ -1,0 +1,51 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  display: flex;
+}
+
+:root {
+  --borderStyle: black solid 2px;
+  --cellSize: 30px;
+}
+
+.cell {
+  height: var(--cellSize);
+  width: var(--cellSize);
+  background-color: azure;  
+  
+  box-sizing: border-box;
+
+  &.leftBordered {
+    border-left: var(--borderStyle);
+  }
+  &.rightBordered {
+    border-right: var(--borderStyle);
+  }
+  &.topBordered {
+    border-top: var(--borderStyle);
+  }
+  &.bottomBordered {
+    border-bottom: var(--borderStyle);
+  }
+
+  &.lift {
+    position: absolute;
+    background-color: deepskyblue;
+    transition: top 0.3s linear, left 0.3s linear;
+  }
+}
+
+.container {
+  position: relative;
+  margin: 30px;
+}
+
+
+.matrix {
+  .matrix-row {
+    display: flex;
+    flex-direction: row;
+  }
+}
