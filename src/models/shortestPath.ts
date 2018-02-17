@@ -42,18 +42,23 @@ export class Dijkstra<T extends NodeData> implements ShortestPathAlg<T> {
         queue.push(0, source)
 
         while (!queue.isEmpty()) {
-            const current = queue.pop().data
-            const curKey = graph.getKey(current)
+            const current = queue.pop()
+            
+            const curKey = graph.getKey(current.data)
 
             if (curKey === targetKey) {
                 return this.tracebackPath(graph, target, parents)
+            }
+
+            if (visited.has(curKey)) {
+                continue
             }
 
             visited.add(curKey)
 
 
             
-            for (const v of graph.getNeighbours(current)) {
+            for (const v of graph.getNeighbours(current.data)) {
                 
                 const vKey = graph.getKey(v)
 
@@ -63,9 +68,9 @@ export class Dijkstra<T extends NodeData> implements ShortestPathAlg<T> {
                 let newWeight = dist.get(curKey) || 0 + v.weight
 
                 if (newWeight < (dist.get(vKey) || Infinity)) {
-                    parents.set(vKey, current)
+                    parents.set(vKey, current.data)
                     dist.set(vKey, newWeight)
-                    queue.push(v.weight, v)
+                    queue.push(current.val + v.weight, v)
                 }
 
             }
