@@ -1,67 +1,70 @@
 
-export class Matrix {
-    constructor({width, height}: {width: number, height: number}) {
-        this.matrix = new Array(height)
-        for (let i=0; i<height; i++) {
-            this.matrix[i] = new Array(width)
-        }
-    }
-    private matrix: {weight: number, canPass: boolean}[][]
-    
-    cellIsFilled(i: number, j: number) {
-        const row = this.matrix[i]
-        if (row === undefined) {
-            return false
-        }
-        const cell = row[j]
-        if (cell === undefined) {
-            return false
-        }
-        return !cell.canPass
+type MapCbData<T> = { h: number, w: number, cell: T }
+
+export class Matrix<T> {
+    readonly width: number
+    readonly height: number
+    constructor({ width, height, data }: { width: number, height: number, data: T[][] }) {
+        this.width = width
+        this.height = height
+        this.matrix = data
     }
 
-    getForView(): ViewCellModel[][] {
-        const res = new Array(this.matrix.length)
-        for (let i=0; i<res.length; i++) {
-            res[i] = new Array(this.matrix[i].length);
-
-            for (let j=0; j<this.matrix[i].length; j++) {
-                const filled = this.cellIsFilled(i, j);
-                let classes: CellStyles = {}
-                if (filled) {
-                    classes = {
-                        ...classes,
-                        bottomBordered: !this.cellIsFilled(i+1, j),
-                        leftBordered: !this.cellIsFilled(i, j-1),
-                        rightBordered: !this.cellIsFilled(i, j+1),
-                        topBordered: !this.cellIsFilled(i-1, j),
-                    }
-                }
-                const cell = this.matrix[i][j]
-                const data: ViewCellModel = {
-                    color: cell.canPass ? getColorForWeight(cell.weight): undefined,
-                    classes,
-                    canPass: cell.canPass,
-                    weight: cell.weight,
-                    left: j,
-                    top: i,
-                }
-                res[i][j] = data
-            }
+    static createEmpty<T>({ width, height }: { width: number, height: number }): Matrix<T> {
+        const matrix = new Array(height)
+        for (let i = 0; i < height; i++) {
+            matrix[i] = new Array(width)
         }
-        return res
+        return new Matrix({ width, height, data: matrix })
+    }
+    private matrix: T[][]
+
+    get(h: number, w: number): T | undefined {
+        if (h < 0 || w < 0 || h >= this.height || w >= this.width) {
+            return undefined
+        }
+        return this.matrix[h][w]
     }
 
-    fillMatrixRandomly() {
-        for (let i=0; i<this.matrix.length; i++) {
-            for (let j=0; j<this.matrix[i].length; j++) {
-                let weight = 0
-                let canPass = Math.random() < 0.66;
-                if (canPass) {
-                    weight = Math.round(Math.random()*MAX_WEIGHT)
-                }
-                this.matrix[i][j] = {canPass, weight}
+
+
+    *[Symbol.iterator](): IterableIterator<MapCbData<T>> {
+        for (let h=0; h<this.height; h++){
+            const row = this.matrix[h]
+            for (let w=0; w<this.width; w++)  {
+                const cell = row[w]
+                yield ({ cell, h, w })
             }
         }
     }
+
+    *neighbours(findH: number, findW: number): IterableIterator<MapCbData<T>> {
+        const indexes = [
+            [findH + 1, findW],
+            [findH, findW + 1],
+            [findH - 1, findW],
+            [findH, findW - 1],
+        ]
+        for (const [h, w] of indexes) {
+            const cell = this.get(h, w)
+            if (cell === undefined) {
+                continue
+            }
+            yield ({ cell, h, w })
+        }
+    }
+
+    mapRow<R>(mapper: (value: T[], index: number) => R) {
+        return this.matrix.map(mapper)
+    }
+
+    set(h: number, w: number, data: T) {
+        this.matrix[h][w] = data
+    }
+
+    map<R>(mapper: (data: MapCbData<T>) => R): Matrix<R> {
+        const data = this.matrix.map((row, h) => row.map((cell, w) => mapper({ h, w, cell })))
+        return new Matrix({ data, height: this.height, width: this.width })
+    }
+
 }

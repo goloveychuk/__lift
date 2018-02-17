@@ -1,77 +1,124 @@
 
 import * as React from 'react';
 import * as ClassNames from 'classnames'
-import {ViewCellModel, LiftCellModel, LiftCellData, Matrix} from './models'
-import {ReadOnlyAtom, Atom, F} from '@grammarly/focal'
+
+import { AppState, LiftCellData } from './models/appState'
+import { CellViewModel } from './models/viewModels'
+import { ReadOnlyAtom, Atom, F } from '@grammarly/focal'
+import { Observable, Subscription } from 'rxjs'
 
 
-
-function CellView({cell, onClick}: {cell: ViewCellModel, onClick():void }) {
-    const {classes, color } = cell
-    const classNames = ClassNames('cell', {
-        ...classes
-    })
-    let style: React.CSSProperties = {};
-    if (color !== undefined) {
-        const colorStr = color && `rgb(${color.red}, ${color.green}, ${color.blue}, ${color.alpha})`
-        style.backgroundColor = colorStr
-    }
-    
-    return <div style={style} onClick={onClick} className={classNames}>
-
-    </div>
+interface CellViewProps {
+    cell: Atom<CellViewModel>
+    onClick(cell: CellViewModel): void
 }
 
-function LiftCell({cell}: {cell: Atom<LiftCellData>}) {
-    const styles: React.CSSProperties = {
-        top: cell.lens('topPosition'),
-        left: cell.lens('leftPosition'),
-    }
-    return <F.div className='cell lift' style={styles}>
+function CellView({ cell, onClick }: CellViewProps) {
+
+    const classNames = cell.lens('classes').view(classes =>
+        ClassNames('cell', {
+            ...classes
+        })
+    )
+
+    let style = cell.lens('color').view(color => {
+        if (color !== undefined) {
+            const backgroundColor = color && `rgb(${color.red}, ${color.green}, ${color.blue})`
+            return { backgroundColor }
+        }
+        return undefined
+    })
+
+    return <F.div style={style}  onClick={() => onClick(cell.get())} className={classNames}>
 
     </F.div>
 }
 
 
 
-let leftIndex = 0
-let topIndex = 0
+// function LiftCell({ cell }: { cell: Observable<LiftCellData> }) {
+//     const styles: React.CSSProperties = {
+//         top: cell.map(c => c.topPosition),
+//         left: cell.map(c => c.leftPosition),
 
-setInterval(()=>{
-    // liftCell.updatePosition({leftIndex: ++leftIndex, topIndex: ++topIndex})
-}, 1000)
+//         transition: cell.map(c => Math.floor(c.animation.duration / 100)/10).map(dur => `top ${dur}s linear, left ${dur}s linear`)
+//     }
 
-const MATRIX_HEIGHT = 20
-const MATRIX_WIDTH = 30
+//     // cell.subscribe(r=>console.log(r))
+//     return <F.div className='cell lift' style={styles}>
 
-const liftCell = new LiftCellModel()
+//     </F.div>
+// }
+interface LiftCellState {
+    cell: LiftCellData | null
+}
+
+class LiftCell extends React.Component<{ cell: Observable<LiftCellData> }, LiftCellState> {
+    state: LiftCellState = {
+        cell: null
+    }
+    _subscription: Subscription | undefined
+    componentDidMount() {
+        this._subscription = this.props.cell.subscribe(cell => { this.setState({ cell }) })
+    }
+    componentWillUnmount() {
+        this._subscription && this._subscription.unsubscribe()
+    }
+    render() {
+        const { cell } = this.state
+        if (cell === null) {
+            return null
+        }
+        const duration = Math.floor(cell.animation.duration / 100) / 10
+        console.log(cell)
+        const styles: React.CSSProperties = {
+            top: cell.topPosition,
+            left: cell.leftPosition,
+            transition: `top ${duration}s linear, left ${duration}s linear`
+        }
+
+        return <div className='cell lift' style={styles}>
+
+        </div>
+    }
+
+}
 
 
-export class RootView extends React.Component {
-    
-    onClickCell = (cell: ViewCellModel) => {
+
+interface State {
+    appState: AppState
+}
+
+
+export class RootView extends React.Component<{}, State> {
+    constructor(props: {}) {
+        super(props)
+        this.state = {
+            appState: new AppState()
+        }
+    }
+    onClickCell = (cell: CellViewModel) => {
         if (!cell.canPass) {
             return
         }
-        liftCell.updatePosition({topIndex: cell.top, leftIndex: cell.left})
+        this.state.appState.setTargetPosition(cell)
     }
+    
     render() {
-        const matrix = new Matrix({
-            width: MATRIX_WIDTH,
-            height: MATRIX_HEIGHT
-        })
-        matrix.fillMatrixRandomly()
+        const { appState } = this.state;
 
-        const viewMatrix = matrix.getForView()
         return <div className='container'>
-            <LiftCell cell={liftCell.data}/>
-            <div className='matrix'>
-                {viewMatrix.map(row => 
-                    <div className='matrix-row'>
-                        {row.map(cell => <CellView onClick={()=>this.onClickCell(cell)} cell={cell} />)}
-                    </div>
-                )}
-            </div>
+            <LiftCell cell={appState.liftCellState} />
+            <F.div className='matrix'>
+                {
+                    appState.getMatrixForView().map(matrix => matrix.mapRow(row =>
+                        <div className='matrix-row'>
+                            {row.map(cell => <CellView onClick={this.onClickCell} cell={cell} />)}
+                        </div>
+                    ))
+                }
+            </F.div>
         </div>
     }
 }

@@ -6,8 +6,9 @@ body {
 }
 
 :root {
-  --borderStyle: black solid 2px;
+  --borderStyle: black solid 1px;
   --cellSize: 30px;
+  /* --transition: linear; */
 }
 
 .cell {
@@ -30,10 +31,27 @@ body {
     border-bottom: var(--borderStyle);
   }
 
+  &.canPass {
+    opacity: 0.6;
+    &:hover { 
+      transform: scale(1.5);
+      transition: transform 0.5s ease-in-out;
+      opacity: 1;
+      z-index: 2;
+    }
+  }
+
+  &.highlighted {
+    transform: rotate(45deg) scale(0.4);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+
   &.lift {
     position: absolute;
     background-color: deepskyblue;
-    transition: top 0.3s linear, left 0.3s linear;
+    z-index: 3;
+    /* transition: top 1s var(--transition), left 1s var(--transition); */
   }
 }
 
