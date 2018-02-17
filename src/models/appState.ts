@@ -202,8 +202,8 @@ export class AppState {
 
         this.highlightedCells = this.targetPosition
             .switchMap(targetPosition => {
-                const steps = getStepsCurried(lastPosition.get(), targetPosition) //todo avoid recalcasd
-                return Observable.from(highlightedSteps).map(step => ({ step, highlighted: false }))
+                const steps = getStepsCurried(lastPosition.get(), targetPosition) //todo avoid recalcs
+                return Observable.from(highlightedSteps).map(step => ({ step, highlighted: false })) //todo rewrite
                     .concat(Observable.from(steps).zip(Observable.interval(50), step => ({ step, highlighted: true }))
                         .do(({ step }) => {
                             highlightedSteps.push(step) //todo rewrite

@@ -2,6 +2,7 @@
   "name": "front",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://goloveychuk.github.io/education-lift/",
   "dependencies": {
     "@grammarly/focal": "^0.6.434",
     "@types/classnames": "^2.2.3",
@@ -44,7 +45,9 @@
   "scripts": {
     "start": "node scripts/start.js",
     "build": "node scripts/build.js",
-    "test": "node scripts/test.js --env=jsdom"
+    "test": "node scripts/test.js --env=jsdom",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "devDependencies": {
     "@types/jest": "^21.1.6",
@@ -52,6 +55,7 @@
     "@types/node": "^8.0.51",
     "@types/react": "^16.0.22",
     "@types/react-dom": "^16.0.3",
+    "gh-pages": "^1.1.0",
     "postcss-loader": "^2.0.8",
     "postcss-nested": "^3.0.0",
     "shallowequal": "^1.0.2",
