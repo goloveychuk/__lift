@@ -146,11 +146,12 @@ function getSteps(
 
 export class AppState {
     private inputMatrix: Atom<Matrix<InputMatrixData>>
-
-    liftCellState: Observable<LiftCellData>
     private targetPosition: Atom<PointModel>
 
-    private highlightedCells: Observable<{ step: PointModel, highlighted: boolean }>
+    liftCellState: Observable<LiftCellData>
+
+    matrixForView: ReadOnlyAtom<Matrix<Atom<CellViewModel>>>
+
     constructor() {
 
 
@@ -200,7 +201,7 @@ export class AppState {
 
         const highlightedSteps: PointModel[] = []  //todo rewrite
 
-        this.highlightedCells = this.targetPosition
+        const highlightedCells = this.targetPosition
             .switchMap(targetPosition => {
                 const steps = getStepsCurried(lastPosition.get(), targetPosition) //todo avoid recalcs
                 return Observable.from(highlightedSteps).map(step => ({ step, highlighted: false })) //todo rewrite
@@ -212,22 +213,18 @@ export class AppState {
                 // .pipe(repeatOnUnsubscribeOperator(({step})=>({step, highlighted: false})))
             })
 
-    }
-
-
-    getMatrixForView(): Observable<Matrix<Atom<CellViewModel>>> {
-        return this.inputMatrix.view(matrix =>
+        this.matrixForView = this.inputMatrix.view(matrix =>
             getMatrixForView(matrix, MAX_WEIGHT)
                 .map(({ cell }) => Atom.create(cell)))
-            .map(matrix => {
-                this.highlightedCells.subscribe(({ step, highlighted }) => {  //todo rewrite
-                    matrix.get(step.h, step.w)!.modify(r => {
-                        const classes: CellStyles = { ...r.classes, highlighted }
-                        return { ...r, classes }
-                    })
-                })
-                return matrix
+
+
+        highlightedCells.subscribe(({ step, highlighted }) => {  //todo rewrite
+            this.matrixForView.get().get(step.h, step.w)!.modify(r => {
+                const classes: CellStyles = { ...r.classes, highlighted }
+                return { ...r, classes }
             })
+        })
+
     }
 
     setTargetPosition(targetPosition: CellViewModel) {

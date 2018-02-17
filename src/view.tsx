@@ -112,7 +112,7 @@ export class RootView extends React.Component<{}, State> {
             <LiftCell cell={appState.liftCellState} />
             <F.div className='matrix'>
                 {
-                    appState.getMatrixForView().map(matrix => matrix.mapRow(row =>
+                    appState.matrixForView.map(matrix => matrix.mapRow(row =>
                         <div className='matrix-row'>
                             {row.map(cell => <CellView onClick={this.onClickCell} cell={cell} />)}
                         </div>
