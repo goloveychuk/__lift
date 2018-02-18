@@ -37,7 +37,6 @@ export class Dijkstra<T extends NodeData> implements ShortestPathAlg<T> {
         const dist = new Map<number | string, number>()
 
         const targetKey = graph.getKey(target)
-        dist.set(targetKey, 0.0)
 
         queue.push(0, source)
 
@@ -65,12 +64,12 @@ export class Dijkstra<T extends NodeData> implements ShortestPathAlg<T> {
                 if (visited.has(vKey)) {
                     continue
                 }
-                let newWeight = dist.get(curKey) || 0 + v.weight
+                let newWeight = current.val + v.weight
 
                 if (newWeight < (dist.get(vKey) || Infinity)) {
                     parents.set(vKey, current.data)
                     dist.set(vKey, newWeight)
-                    queue.push(current.val + v.weight, v)
+                    queue.push(newWeight, v)
                 }
 
             }
