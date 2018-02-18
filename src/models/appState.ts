@@ -199,19 +199,23 @@ export class AppState {
             }
         })
 
-        const highlightedSteps: PointModel[] = []  //todo rewrite
 
-        const highlightedCells = this.targetPosition
-            .switchMap(targetPosition => {
-                const steps = getStepsCurried(lastPosition.get(), targetPosition) //todo avoid recalcs
-                return Observable.from(highlightedSteps).map(step => ({ step, highlighted: false })) //todo rewrite
-                    .concat(Observable.from(steps).zip(Observable.interval(50), step => ({ step, highlighted: true }))
-                        .do(({ step }) => {
-                            highlightedSteps.push(step) //todo rewrite
-                        })
-                    )
-                // .pipe(repeatOnUnsubscribeOperator(({step})=>({step, highlighted: false})))
-            })
+        const highlightedCells = (() => {
+            let previousHighlighted: PointModel[] = []  //todo rewrite
+            return this.targetPosition
+                .switchMap(targetPosition => {
+                    const steps = getStepsCurried(lastPosition.get(), targetPosition) //todo avoid recalcs
+                    const obs = Observable.from(previousHighlighted).map(step => ({ step, highlighted: false })) //todo rewrite
+                        .concat(Observable.from(steps).zip(Observable.interval(50), step => ({ step, highlighted: true }))
+                            .do(({ step }) => {
+                                previousHighlighted.push(step) //todo rewrite
+                            })
+                        )
+                    previousHighlighted = []
+                    return obs
+                    // .pipe(repeatOnUnsubscribeOperator(({step})=>({step, highlighted: false})))
+                })
+        })()
 
         this.matrixForView = this.inputMatrix.view(matrix =>
             getMatrixForView(matrix, MAX_WEIGHT)
