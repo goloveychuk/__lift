@@ -125,6 +125,31 @@ function createCurrentPositionObs(
         )
 }
 
+function createMatrixForViewObs(inputMatrix: ReadOnlyAtom<Matrix<InputMatrixData>>) {
+    return inputMatrix.view(matrix =>
+        getMatrixForView(matrix, MAX_WEIGHT)
+            .map(({ cell }) => Atom.create(cell)))
+}
+
+function createHighlightedCellsObs(
+    getSteps: (from: PointModel | undefined, to: PointModel) => PointModel[],
+    lastPosition: Atom<PointModel>,
+    targetPosition: Observable<PointModel>) {
+    let previousHighlighted: PointModel[] = []  //todo rewrite
+    return targetPosition
+        .switchMap(targetPosition => {
+            const steps = getSteps(lastPosition.get(), targetPosition) //todo avoid recalcs
+            const obs = Observable.from(previousHighlighted).map(step => ({ step, highlighted: false })) //todo rewrite
+                .concat(Observable.from(steps).zip(Observable.interval(50), step => ({ step, highlighted: true }))
+                    .do(({ step }) => {
+                        previousHighlighted.push(step) //todo rewrite
+                    })
+                )
+            previousHighlighted = []
+            return obs
+            // .pipe(repeatOnUnsubscribeOperator(({step})=>({step, highlighted: false})))
+        })
+}
 
 function getSteps(
     graphMatrix: GraphRepresentableMatrix,
@@ -182,15 +207,17 @@ export class AppState {
         const getStepsCurried = Lodash.curry(getSteps)(graphMatrix, pathFinder)
 
 
-
+        //current position
         const currentPositionObs = createCurrentPositionObs(getStepsCurried, lastPosition, this.targetPosition)
             .startWith(initialPosition)
-
 
         currentPositionObs.subscribe(pos => { //todo rewrite
             lastPosition.set(pos)
         })
+        //current position        
 
+
+        //lift cell state
         this.liftCellState = currentPositionObs.map(step => {
             return {
                 leftPosition: step.w * CELL_SIZE,
@@ -198,29 +225,16 @@ export class AppState {
                 animation: getAnimation(step)
             }
         })
+        //lift cell state
+        
+
+        //matrix for view
+        this.matrixForView = createMatrixForViewObs(this.inputMatrix)
+        //matrix for view
 
 
-        const highlightedCells = (() => {
-            let previousHighlighted: PointModel[] = []  //todo rewrite
-            return this.targetPosition
-                .switchMap(targetPosition => {
-                    const steps = getStepsCurried(lastPosition.get(), targetPosition) //todo avoid recalcs
-                    const obs = Observable.from(previousHighlighted).map(step => ({ step, highlighted: false })) //todo rewrite
-                        .concat(Observable.from(steps).zip(Observable.interval(50), step => ({ step, highlighted: true }))
-                            .do(({ step }) => {
-                                previousHighlighted.push(step) //todo rewrite
-                            })
-                        )
-                    previousHighlighted = []
-                    return obs
-                    // .pipe(repeatOnUnsubscribeOperator(({step})=>({step, highlighted: false})))
-                })
-        })()
-
-        this.matrixForView = this.inputMatrix.view(matrix =>
-            getMatrixForView(matrix, MAX_WEIGHT)
-                .map(({ cell }) => Atom.create(cell)))
-
+        //highlighted cells
+        const highlightedCells = createHighlightedCellsObs(getStepsCurried, lastPosition, this.targetPosition)
 
         highlightedCells.subscribe(({ step, highlighted }) => {  //todo rewrite
             this.matrixForView.get().get(step.h, step.w)!.modify(r => {
@@ -228,6 +242,8 @@ export class AppState {
                 return { ...r, classes }
             })
         })
+        //highlighted cells
+
 
     }
 
