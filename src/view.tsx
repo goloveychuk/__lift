@@ -23,7 +23,7 @@ function CellView({ cell, onClick }: CellViewProps) {
 
     let style = cell.lens('color').view(color => {
         if (color !== undefined) {
-            const backgroundColor = color && `rgb(${color.red}, ${color.green}, ${color.blue})`
+            const backgroundColor = `hsl(${color.hue}, ${color.sat}%, ${color.light}%)`
             return { backgroundColor }
         }
         return undefined

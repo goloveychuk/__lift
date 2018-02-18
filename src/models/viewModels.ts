@@ -1,9 +1,9 @@
 import { Matrix } from './matrix';
 
 interface CellColor {
-    red: number,
-    green: number,
-    blue: number,
+    hue: number,
+    sat: number,
+    light: number,
 }
 
 export interface CellStyles {
@@ -35,19 +35,11 @@ export interface InputMatrixData {
 
 function getColorForWeight(weight: number, max_weight: number): CellColor {
     const d = weight / max_weight
-    let red, green
-    if (d < 0.5) {
-        green = 255
-        red = Math.floor(255 * d * 2)
-    } else {
-        red = 255
-        const d2 = (d - 0.5) * 2
-        green = 255 - Math.floor(255 * d2)
-    }
+    const hue = 120 * (1-d) // 0 is red, 120 is green
     return {
-        red,
-        green,
-        blue: 0
+        hue,
+        sat: 100,
+        light: 50
     }
 }
 
