@@ -42,7 +42,8 @@ body {
   }
 
   &.highlighted {
-    transform: rotate(45deg) scale(0.4);
+    transform: rotate(45deg) scale(0.5);
+    opacity: 1;    
     transition: transform 0.3s ease-in-out;
   }
   
