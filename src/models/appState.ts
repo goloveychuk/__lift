@@ -103,26 +103,23 @@ function withDelayOperator<T extends { delay: number }>(observable: Observable<T
 
 
 function createCurrentPositionObs(
-    getSteps: (from: PointModel | undefined, to: PointModel) => PointModel[],
-    lastPosition: Atom<PointModel>,
-    targetPositionObs: Observable<PointModel>,
+    pathObs: Observable<PointModel[]>
 ): Observable<PointModel> {
 
-    return targetPositionObs
-        .switchMap(targetPosition =>
-            Observable.from(getSteps(lastPosition.get(), targetPosition))
-                .map(step => {
-                    const animation = getAnimation(step)
-                    return {
-                        step,
-                        delay: animation.duration
-                    }
-                })
-                .pipe(withDelayOperator)
-                .map(({ step }) => {
-                    return step
-                })
-        )
+    return pathObs.switchMap(path =>
+        Observable.from(path)
+            .map(step => {
+                const animation = getAnimation(step)
+                return {
+                    step,
+                    delay: animation.duration
+                }
+            })
+            .pipe(withDelayOperator)
+            .map(({ step }) => {
+                return step
+            })
+    )
 }
 
 function createMatrixForViewObs(inputMatrix: ReadOnlyAtom<Matrix<InputMatrixData>>) {
@@ -131,24 +128,19 @@ function createMatrixForViewObs(inputMatrix: ReadOnlyAtom<Matrix<InputMatrixData
             .map(({ cell }) => Atom.create(cell)))
 }
 
-function createHighlightedCellsObs(
-    getSteps: (from: PointModel | undefined, to: PointModel) => PointModel[],
-    lastPosition: Atom<PointModel>,
-    targetPosition: Observable<PointModel>) {
+function createHighlightedCellsObs(pathObs: Observable<PointModel[]>) {
     let previousHighlighted: PointModel[] = []  //todo rewrite
-    return targetPosition
-        .switchMap(targetPosition => {
-            const steps = getSteps(lastPosition.get(), targetPosition) //todo avoid recalcs
-            const obs = Observable.from(previousHighlighted).map(step => ({ step, highlighted: false })) //todo rewrite
-                .concat(Observable.from(steps).zip(Observable.interval(50), step => ({ step, highlighted: true }))
-                    .do(({ step }) => {
-                        previousHighlighted.push(step) //todo rewrite
-                    })
-                )
-            previousHighlighted = []
-            return obs
-            // .pipe(repeatOnUnsubscribeOperator(({step})=>({step, highlighted: false})))
-        })
+    return pathObs.switchMap(path => {
+        const obs = Observable.from(previousHighlighted).map(step => ({ step, highlighted: false })) //todo rewrite
+            .concat(Observable.from(path).zip(Observable.interval(50), step => ({ step, highlighted: true }))
+                .do(({ step }) => {
+                    previousHighlighted.push(step) //todo rewrite
+                })
+            )
+        previousHighlighted = []
+        return obs
+        // .pipe(repeatOnUnsubscribeOperator(({step})=>({step, highlighted: false})))
+    })
 }
 
 function getSteps(
@@ -207,8 +199,14 @@ export class AppState {
         const getStepsCurried = Lodash.curry(getSteps)(graphMatrix, pathFinder)
 
 
+        const pathObs = this.targetPosition
+            .switchMap(targetPosition =>
+                Observable.of(getStepsCurried(lastPosition.get(), targetPosition))
+            )
+
+
         //current position
-        const currentPositionObs = createCurrentPositionObs(getStepsCurried, lastPosition, this.targetPosition)
+        const currentPositionObs = createCurrentPositionObs(pathObs)
             .startWith(initialPosition)
 
         currentPositionObs.subscribe(pos => { //todo rewrite
@@ -226,7 +224,7 @@ export class AppState {
             }
         })
         //lift cell state
-        
+
 
         //matrix for view
         this.matrixForView = createMatrixForViewObs(this.inputMatrix)
@@ -234,7 +232,7 @@ export class AppState {
 
 
         //highlighted cells
-        const highlightedCells = createHighlightedCellsObs(getStepsCurried, lastPosition, this.targetPosition)
+        const highlightedCells = createHighlightedCellsObs(pathObs)
 
         highlightedCells.subscribe(({ step, highlighted }) => {  //todo rewrite
             this.matrixForView.get().get(step.h, step.w)!.modify(r => {
